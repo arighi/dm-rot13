@@ -53,6 +53,7 @@ static int rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_c
 	     	bvec_kunmap_irq(data, &flags);
 	     }
 	     ret = DM_MAPIO_REMAPPED;
+			 break;
 		case READA:
 			 printk("readahead attempted\n");
 			 return -EIO;
