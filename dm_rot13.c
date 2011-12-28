@@ -7,14 +7,15 @@ struct dm_rot13_c {
 	sector_t start;
 };
 
-static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv) {
+static int 
+rot13_ctr(struct dm_target *target, unsigned int argc, char **argv) {
 	struct dm_rot13_c *c = NULL;
 
 	if (argc != 1) {
 		target->error = "Invalid arguments. expected target device";
 		return -EINVAL;
 	}
-	
+
 	c = kmalloc(sizeof(*c), GFP_KERNEL);
 	if(c == NULL) {
 		return -ENOMEM;
@@ -29,12 +30,13 @@ static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv) {
 	target->private = c;
 	return 0;
 
-		error:
+error:
 	kfree(c);
 	return -EINVAL;
 }
 
-static int rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_context) {
+static int 
+rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_context) {
 	unsigned long flags;
 	struct bio_vec *bv;
 	int i, j, ret;
@@ -43,29 +45,33 @@ static int rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_c
 	bio->bi_bdev = c->dev->bdev;
 	switch(bio_rw(bio)) {
 		case WRITE:
-	     bio_for_each_segment(bv, bio, i) {
-	     	char *data = bvec_kmap_irq(bv, &flags);
-	     	for(j = 0; j < bv->bv_len; j++) {
-	     		if(data[j] >= 'a' && data[j] <= 'z') {
-	     			data[j] = abs('z' - data[j]) + 'a';
-	     		}
-	     	}
-	     	bvec_kunmap_irq(data, &flags);
-	     }
-	     ret = DM_MAPIO_REMAPPED;
-			 break;
+			bio_for_each_segment(bv, bio, i) {
+				char *data = bvec_kmap_irq(bv, &flags);
+				for(j = 0; j < bv->bv_len; j++) {
+					if(data[j] >= 'a' && data[j] <= 'z') {
+						data[j] = abs('z' - data[j]) + 'a';
+					}
+					if(data[j] >= 'A' && data[j] <= 'Z') {
+						data[j] = abs('Z' - data[j]) + 'A';
+					}
+				}
+				bvec_kunmap_irq(data, &flags);
+			}
+			ret = DM_MAPIO_REMAPPED;
+			break;
 		case READA:
-			 printk("readahead attempted\n");
-			 return -EIO;
+			printk("readahead attempted\n");
+			return -EIO;
 		case READ:
-			 dump_stack();
-			 printk("read %d bvecs\n", bio->bi_vcnt);
-	     ret = DM_MAPIO_REMAPPED;
+			dump_stack();
+			printk("read %d bvecs\n", bio->bi_vcnt);
+			ret = DM_MAPIO_REMAPPED;
 	}
 	return ret;
 }
 
-static void rot13_dtr(struct dm_target *ti) {
+static void 
+rot13_dtr(struct dm_target *ti) {
 	struct dm_rot13_c *c = (struct dm_rot13_c *) ti->private;
 	dm_put_device(ti, c->dev);
 	kfree(c);
