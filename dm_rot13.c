@@ -1,6 +1,5 @@
 #include <linux/module.h>
 #include <linux/device-mapper.h>
-#include <linux/mmzone.h>
 
 #define DM_MSG_PREFIX "rot13"
 
