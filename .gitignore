@@ -2,6 +2,8 @@
 *.o
 *.ko
 *.cmd
+*.swp
+*.swo
 Module.symvers
 modules.order
 .tmp_versions*
