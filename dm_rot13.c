@@ -1,5 +1,7 @@
 #include <linux/module.h>
 #include <linux/device-mapper.h>
+#include <linux/mmzone.h>
+
 #define DM_MSG_PREFIX "rot13"
 
 struct dm_rot13_c {
@@ -35,37 +37,55 @@ error:
 	return -EINVAL;
 }
 
+static inline void 
+do_rot13(char *data, int len) {
+	int i;
+	for(i = 0; i < len; i++) {
+		if(data[i] >= 'a' && data[i] <= 'z') {
+			data[i] = abs('z' - data[i]) + 'a';
+		}
+		if(data[i] >= 'A' && data[i] <= 'Z') {
+			data[i] = abs('Z' - data[i]) + 'A';
+		}
+	}
+}
+
+void 
+do_rot13_bio(struct bio *bio) {
+	unsigned long flags;
+	int i;
+	struct bio_vec *bv;
+
+	bio_for_each_segment(bv, bio, i) {
+		char *data = bvec_kmap_irq(bv, &flags);
+		do_rot13(data, bv->bv_len);
+		bvec_kunmap_irq(data, &flags);
+	}
+}
+
+static int 
+rot13_end_io(struct dm_target *t, struct bio *bio, int error, union map_info *map_context) {
+	do_rot13_bio(bio);
+	return 0;
+}
+
 static int 
 rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_context) {
-	unsigned long flags;
-	struct bio_vec *bv;
-	int i, j, ret;
+	int ret = -EIO;
 
 	struct dm_rot13_c *c = (struct dm_rot13_c *) t->private;
 	bio->bi_bdev = c->dev->bdev;
 	switch(bio_rw(bio)) {
 		case WRITE:
-			bio_for_each_segment(bv, bio, i) {
-				char *data = bvec_kmap_irq(bv, &flags);
-				for(j = 0; j < bv->bv_len; j++) {
-					if(data[j] >= 'a' && data[j] <= 'z') {
-						data[j] = abs('z' - data[j]) + 'a';
-					}
-					if(data[j] >= 'A' && data[j] <= 'Z') {
-						data[j] = abs('Z' - data[j]) + 'A';
-					}
-				}
-				bvec_kunmap_irq(data, &flags);
-			}
+			do_rot13_bio(bio);
 			ret = DM_MAPIO_REMAPPED;
 			break;
 		case READA:
-			printk("readahead attempted\n");
-			return -EIO;
+			ret = -EIO;
+			break;
 		case READ:
-			dump_stack();
-			printk("read %d bvecs\n", bio->bi_vcnt);
 			ret = DM_MAPIO_REMAPPED;
+			break;
 	}
 	return ret;
 }
@@ -83,10 +103,13 @@ static struct target_type rot13_target = {
 	.module = THIS_MODULE,
 	.ctr = rot13_ctr,
 	.map = rot13_map,
-	.dtr = rot13_dtr
+	.dtr = rot13_dtr,
+	.end_io = rot13_end_io
 };
 
 static int __init dm_rot13_init(void) {
+	
+
 	int r = dm_register_target(&rot13_target);
 
 	if(r < 0) DMERR("register failed: %d", r);
