@@ -5,7 +5,6 @@
 
 struct dm_rot13_c {
 	struct dm_dev *dev;
-	sector_t start;
 };
 
 static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv)
@@ -21,7 +20,6 @@ static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv)
 	if (c == NULL)
 		return -ENOMEM;
 
-	c->start = 0;
 	if (dm_get_device(target, argv[0],
 	    dm_table_get_mode(target->table), &c->dev)) {
 		target->error = "dm-" DM_MSG_PREFIX ": device lookup failed";
