@@ -8,8 +8,8 @@ struct dm_rot13_c {
 	sector_t start;
 };
 
-static int 
-rot13_ctr(struct dm_target *target, unsigned int argc, char **argv) {
+static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv)
+{
 	struct dm_rot13_c *c = NULL;
 
 	if (argc != 1) {
@@ -18,12 +18,12 @@ rot13_ctr(struct dm_target *target, unsigned int argc, char **argv) {
 	}
 
 	c = kmalloc(sizeof(*c), GFP_KERNEL);
-	if(c == NULL) {
+	if (c == NULL)
 		return -ENOMEM;
-	}
 
 	c->start = 0;
-	if(dm_get_device(target, argv[0], dm_table_get_mode(target->table), &c->dev)) {
+	if (dm_get_device(target, argv[0],
+	    dm_table_get_mode(target->table), &c->dev)) {
 		target->error = "dm-rot13: device lookup failed";
 		goto error;
 	}
@@ -36,24 +36,23 @@ error:
 	return -EINVAL;
 }
 
-static inline void 
-do_rot13(char *data, int len) {
+static inline void do_rot13(char *data, int len)
+{
 	int i;
-	for(i = 0; i < len; i++) {
-		if(data[i] >= 'a' && data[i] <= 'z') {
+
+	for (i = 0; i < len; i++) {
+		if (data[i] >= 'a' && data[i] <= 'z')
 			data[i] = abs('z' - data[i]) + 'a';
-		}
-		if(data[i] >= 'A' && data[i] <= 'Z') {
+		if (data[i] >= 'A' && data[i] <= 'Z')
 			data[i] = abs('Z' - data[i]) + 'A';
-		}
 	}
 }
 
-void 
-do_rot13_bio(struct bio *bio) {
+static void do_rot13_bio(struct bio *bio)
+{
 	unsigned long flags;
-	int i;
 	struct bio_vec *bv;
+	int i;
 
 	bio_for_each_segment(bv, bio, i) {
 		char *data = bvec_kmap_irq(bv, &flags);
@@ -62,19 +61,20 @@ do_rot13_bio(struct bio *bio) {
 	}
 }
 
-static int 
-rot13_end_io(struct dm_target *t, struct bio *bio, int error, union map_info *map_context) {
+static int
+rot13_end_io(struct dm_target *t, struct bio *bio, int error)
+{
 	do_rot13_bio(bio);
 	return 0;
 }
 
-static int 
-rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_context) {
+static int rot13_map(struct dm_target *t, struct bio *bio)
+{
+	struct dm_rot13_c *c = (struct dm_rot13_c *)t->private;
 	int ret = -EIO;
 
-	struct dm_rot13_c *c = (struct dm_rot13_c *) t->private;
 	bio->bi_bdev = c->dev->bdev;
-	switch(bio_rw(bio)) {
+	switch (bio_rw(bio)) {
 		case WRITE:
 			do_rot13_bio(bio);
 			ret = DM_MAPIO_REMAPPED;
@@ -89,9 +89,10 @@ rot13_map(struct dm_target *t, struct bio *bio, union map_info *map_context) {
 	return ret;
 }
 
-static void 
-rot13_dtr(struct dm_target *ti) {
-	struct dm_rot13_c *c = (struct dm_rot13_c *) ti->private;
+static void rot13_dtr(struct dm_target *ti)
+{
+	struct dm_rot13_c *c = (struct dm_rot13_c *)ti->private;
+
 	dm_put_device(ti, c->dev);
 	kfree(c);
 }
@@ -106,22 +107,23 @@ static struct target_type rot13_target = {
 	.end_io = rot13_end_io
 };
 
-static int __init dm_rot13_init(void) {
-	
-
+static int __init dm_rot13_init(void)
+{
 	int r = dm_register_target(&rot13_target);
 
-	if(r < 0) DMERR("register failed: %d", r);
+	if (r < 0)
+		DMERR("register failed: %d", r);
 	return r;
 }
 
-static void __exit dm_rot13_exit(void) {
+static void __exit dm_rot13_exit(void)
+{
 	dm_unregister_target(&rot13_target);
 }
 
 module_init(dm_rot13_init);
 module_exit(dm_rot13_exit);
 
-MODULE_AUTHOR("Abhijit Hoskeri <abhjiithoskeri@gmail.com>");
-MODULE_DESCRIPTION(" device mapper rot13 target");
+MODULE_AUTHOR("Andrea Righi <andrea@betterlinux.com>");
+MODULE_DESCRIPTION("Device mapper rot13 target");
 MODULE_LICENSE("GPL");

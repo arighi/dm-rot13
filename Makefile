@@ -1,7 +1,16 @@
-obj-m:= dm_rot13.o
+ifndef KERNELRELEASE
+ifndef KDIR
+KDIR:=/lib/modules/`uname -r`/build
+endif
+PWD := $(shell pwd)
 
-dm_rot13.ko: dm_rot13.c
-	make ARCH=um -C "/home/abhijit/play/kernel/uml-linux-2.6/" M=`pwd` modules
-
+all:
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
+install:
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules_install
 clean:
-	make ARCH=um -C "/home/abhijit/play/kernel/uml-linux-2.6/" M=`pwd` clean
+	rm -f *.o *.ko *.mod.* .*.cmd Module.symvers modules.order
+	rm -rf .tmp_versions
+else
+	obj-m := dm_rot13.o
+endif
