@@ -5,6 +5,6 @@ Stupid encryption for block devices.
 
 To use, do:
 
-        echo 0 `blockdev --getsize /dev/sdb` rot13 /dev/sdb|dmsetup create rot13sdb
+        echo 0 `blockdev --getsize /dev/sdb` rot13 /dev/sdb | dmsetup create rot13sdb
 
 and mount /dev/mapper/rot13sdb

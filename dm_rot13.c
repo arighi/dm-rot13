@@ -24,7 +24,7 @@ static int rot13_ctr(struct dm_target *target, unsigned int argc, char **argv)
 	c->start = 0;
 	if (dm_get_device(target, argv[0],
 	    dm_table_get_mode(target->table), &c->dev)) {
-		target->error = "dm-rot13: device lookup failed";
+		target->error = "dm-" DM_MSG_PREFIX ": device lookup failed";
 		goto error;
 	}
 
@@ -61,8 +61,7 @@ static void do_rot13_bio(struct bio *bio)
 	}
 }
 
-static int
-rot13_end_io(struct dm_target *t, struct bio *bio, int error)
+static int rot13_end_io(struct dm_target *t, struct bio *bio, int error)
 {
 	do_rot13_bio(bio);
 	return 0;
@@ -98,7 +97,7 @@ static void rot13_dtr(struct dm_target *ti)
 }
 
 static struct target_type rot13_target = {
-	.name = "rot13",
+	.name = DM_MSG_PREFIX,
 	.version = {1, 0, 0},
 	.module = THIS_MODULE,
 	.ctr = rot13_ctr,
